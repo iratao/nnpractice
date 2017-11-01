@@ -1,4 +1,5 @@
 import numpy as np
+from data_prep import features, features_test, targets, targets_test
 
 def sigmoid(x):
     """
@@ -12,37 +13,49 @@ def sigmoid_prime(x):
     """
     return sigmoid(x) * (1 - sigmoid(x))
 
+
+np.random.seed(42)
+n_records, n_features = features.shape
+last_loss = None
+
+# reshape your data - necessary??
+targets = targets.values.reshape(-1, 1)
+targets_test = targets_test.values.reshape(-1, 1)
+
+# Initialize weights
+w = np.random.normal(scale=1/n_features**0.5, size=n_features)
+# w.shape (6,)
+w = w.reshape(-1, 1)
 learnrate = 0.5
-x = np.array([1, 2, 3, 4])
-y = np.array(0.5)
+epochs = 1000
 
-# Initial weights
-w = np.array([0.5, -0.5, 0.3, 0.1])
+# train model
+# features.shape (360, 6)
+# targets.shape (360, 1)
+# features_test (40, 6)
+# targets_test (40, 1)
+for i in np.arange(epochs):
+	del_w = np.zeros(w.shape)
+	h = np.matmul(features, w) # h.shape = (360, 1)
+	nn_output = sigmoid(h) # nn_output.shape = (360, 1)
+	error = targets - nn_output # error.shape = (360, 1)
+	error_term = error * sigmoid_prime(h) # error_term.shape = (360, 1)
+	del_w += np.dot(features.T, error_term) 
+	w += learnrate * del_w / n_records
 
-### Calculate one gradient descent step for each weight
-### Note: Some steps have been consilated, so there are
-###       fewer variable names than in the above sample code
+	if i % (epochs / 10) == 0:
+		out = sigmoid(np.dot(features, w))
+		loss = np.mean((out - targets) ** 2)
+		if last_loss and last_loss < loss:
+			print("Train loss: ", loss, "  WARNING - Loss Increasing")
+		else:
+			print("Train loss: ", loss)
+		last_loss = loss
 
-# TODO: Calculate the node's linear combination of inputs and weights
-h = np.matmul(w.T, x)
 
-# TODO: Calculate output of neural network
-nn_output = sigmoid(h)
-
-# TODO: Calculate error of neural network
-error = y - nn_output
-
-# TODO: Calculate the error term
-#       Remember, this requires the output gradient, which we haven't
-#       specifically added a variable for.
-error_term = error * sigmoid_prime(h)
-
-# TODO: Calculate change in weights
-del_w = learnrate * error_term * x
-
-print('Neural Network output:')
-print(nn_output)
-print('Amount of Error:')
-print(error)
-print('Change in Weights:')
-print(del_w)
+# test model
+h = np.matmul(features_test, w)
+test_output = sigmoid(h)
+predictions = test_output > 0.5
+accuracy = np.mean(predictions == targets_test)
+print("Prediction accuracy: {:.3f}".format(accuracy))
